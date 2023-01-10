@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Skylark rules supporting Tulsi.
+"""Starlark rules supporting Tulsi.
 
 This file provides Bazel aspects used to obtain information about a given
 project and pass it back to Tulsi.
@@ -145,7 +145,7 @@ def _dict_omitting_none(**kwargs):
     return {
         name: kwargs[name]
         for name in kwargs
-        # Skylark doesn't support "is"; comparison is explicit for correctness.
+        # Starlark doesn't support "is"; comparison is explicit for correctness.
         # pylint: disable=g-equals-none,g-explicit-bool-comparison
         if kwargs[name] != None and kwargs[name] != []
     }
@@ -773,7 +773,7 @@ def _tulsi_sources_aspect(target, ctx):
         ]
     else:
         # artifacts may be an empty set type, in which case it must be explicitly
-        # set to None to allow Skylark's serialization to work.
+        # set to None to allow Starlark's serialization to work.
         artifacts = None
 
     srcs = (_collect_files(rule, "attr.srcs") +
@@ -945,7 +945,7 @@ def _tulsi_sources_aspect(target, ctx):
         swift_transitive_modules = swift_transitive_modules.to_list()
         objc_module_maps = objc_module_maps.to_list()
         test_deps = None
-        module_name = None
+        module_name = _get_opt_attr(rule_attr, "module_name")
 
     cc_toolchain = find_cpp_toolchain(ctx)
     target_triplet = _get_apple_clang_triplet(cc_toolchain)

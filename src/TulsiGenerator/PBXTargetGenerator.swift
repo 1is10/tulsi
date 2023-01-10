@@ -245,11 +245,15 @@ final class PBXTargetGenerator: PBXTargetGeneratorProtocol {
       let labelHash: Int
 
       init(ruleEntry: RuleEntry) {
-        self.init(label: ruleEntry.label)
+        self.init(label: ruleEntry.label, moduleName: ruleEntry.moduleName)
       }
 
-      init(label: BuildLabel) {
-        targetName = label.targetName!
+      init(label: BuildLabel, moduleName: String?) {
+        if let moduleName, moduleName.isEmpty == false {
+            targetName = moduleName
+        } else {
+            targetName = label.targetName!
+        }
         labelHash = label.hashValue
       }
     }
@@ -323,10 +327,17 @@ final class PBXTargetGenerator: PBXTargetGeneratorProtocol {
         } else {
           deploymentTargetLabel = parentDeploymentTargetLabel
         }
-        return PBXTargetGenerator.indexerNameForTargetName(entry.label.targetName!,
+        return PBXTargetGenerator.indexerNameForTargetName(IndexerData.getTargetNameFromEntry(entry),
                                                            hash: entry.label.hashValue,
                                                            suffix: deploymentTargetLabel)
       }
+    }
+
+    static func getTargetNameFromEntry(_ entry: RuleEntry) -> String {
+        if let moduleName = entry.moduleName, moduleName.isEmpty == false {
+            return moduleName
+        }
+        return entry.label.targetName!
     }
 
     /// Indicates whether or not this indexer may be merged with the given indexer.
@@ -611,7 +622,6 @@ final class PBXTargetGenerator: PBXTargetGeneratorProtocol {
           nonARCSourceFileInfos.isEmpty &&
           frameworkFileInfos.isEmpty &&
           nonSourceVersionedFileInfos.isEmpty)
-        || ruleEntry.pbxTargetType?.isTest ?? false
         || ruleEntry.type == "filegroup"
         || ruleEntryLabelsToSkipForIndexing.contains(ruleEntry.label) {
         addBuildFileForRule(ruleEntry)
@@ -796,6 +806,8 @@ final class PBXTargetGenerator: PBXTargetGeneratorProtocol {
     if !options.useLegacyBuildSystem {
       buildSettings["CODE_SIGNING_ALLOWED"] = "NO"
     }
+
+    buildSettings["CODE_SIGNING_ALLOWED"] = "NO"
 
     // Explicitly setting the FRAMEWORK_SEARCH_PATHS will allow Xcode to resolve references to the
     // XCTest framework when performing Live issues analysis.
@@ -1339,7 +1351,7 @@ final class PBXTargetGenerator: PBXTargetGeneratorProtocol {
     // Inherit the resolved values from the indexer.
     let deploymentTarget = ruleEntry.deploymentTarget ?? PBXTargetGenerator.defaultDeploymentTarget()
     let deploymentTargetLabel = IndexerData.deploymentTargetLabel(deploymentTarget)
-    let indexerName = PBXTargetGenerator.indexerNameForTargetName(ruleEntry.label.targetName!,
+    let indexerName = PBXTargetGenerator.indexerNameForTargetName(IndexerData.getTargetNameFromEntry(ruleEntry),
                                                                   hash: ruleEntry.label.hashValue,
                                                                   suffix: deploymentTargetLabel)
     let indexerTarget = indexerTargetByName[indexerName]
@@ -1649,17 +1661,7 @@ final class PBXTargetGenerator: PBXTargetGeneratorProtocol {
   }
 
   static func indexerNameForTargetName(_ targetName: String, hash: Int, suffix: String?) -> String {
-    let normalizedTargetName: String
-    if targetName.count > MaxIndexerNameLength {
-      let endIndex = targetName.index(targetName.startIndex, offsetBy: MaxIndexerNameLength - 4)
-      normalizedTargetName = String(targetName[..<endIndex]) + "_etc"
-    } else {
-      normalizedTargetName = targetName
-    }
-    if let suffix = suffix {
-      return String(format: "\(IndexerTargetPrefix)\(normalizedTargetName)_%08X_%@", hash, suffix)
-    }
-    return String(format: "\(IndexerTargetPrefix)\(normalizedTargetName)_%08X", hash)
+    return targetName
   }
 
   // Creates a PBXSourcesBuildPhase with the given references, optionally applying the given

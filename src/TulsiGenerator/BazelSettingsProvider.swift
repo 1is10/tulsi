@@ -134,7 +134,6 @@ class BazelSettingsProvider: BazelSettingsProviderProtocol {
   /// Non-cacheable flags added by Tulsi for opt (Release) builds.
   static let tulsiReleaseFlags = BazelFlags(build: [
       "--compilation_mode=opt",
-      "--strip=always",
       "--apple_generate_dsym",
   ])
 
